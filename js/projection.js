@@ -7,18 +7,29 @@ const sceneDims = [500, 500, 500];
 const F = 200; // Focal length
 const camPos = [200, 150, 0];
 
-function getShadeOfGrey(greyLevel) {
-    // Clamp the value between 0 and 255
-    greyLevel = Math.max(0, Math.min(255, greyLevel));
-    // Convert the grey level to a base-16 (hexadecimal) string
-    const greyHex = greyLevel.toString(16).padStart(2, '0');
-    // Return the CSS color string
-    return `#${greyHex}${greyHex}${greyHex}`;
+function fillSphere(x0, y0, z0, r) {
+    let sphereCount = 0;
+    for (let x = 0; x < sceneDims[0]; x++) {
+        for (let y = 0; y < sceneDims[1]; y++) {
+            for (let z = 0; z < sceneDims[2]; z++) {
+                if ((x - x0) ** 2 + (y - y0) ** 2 + (z - z0) ** 2 <= r ** 2) {
+                    sphereCount++;
+                    scene3D[x][y][z] = 1;
+                }
+            }
+        }
+    }
+    console.log("Created sphere with n points:", sphereCount);
 }
 
-function drawPixel(x, y, color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, 1, 1);
+function fill3DBox(startX, startY, startZ, endX, endY, endZ) {
+    for (let x = startX; x < endX; x++) {
+        for (let y = startY; y < endY; y++) {
+            for (let z = startZ; z < endZ; z++) {
+                scene3D[x][y][z] = 1;
+            }
+        }
+    }
 }
 
 function definePixel(x, y, [r, g, b, a]) {
@@ -31,52 +42,10 @@ function definePixel(x, y, [r, g, b, a]) {
     data.data[d + 3] = a;
 }
 
-// for (let i = 0; i < canvas.width * canvas.height * 4; i+=4) {
-//     data.data[i + 0] = 0;
-//     data.data[i + 1] = 0;
-//     data.data[i + 2] = 255;
-//     data.data[i + 3] = 255;
-//
-// }
-// let newImgData = new ImageData(data.data, canvas.width, canvas.height);
-// ctx.putImageData(newImgData, 0, 0);
-
-console.log(`Creating a ${sceneDims[0]} x ${sceneDims[1]} x ${sceneDims[2]} scene...`);
-var scene3D = Array(sceneDims[0]).fill().map(() => Array(sceneDims[1]).fill().map(() => Array(sceneDims[2]).fill(0)));
-
-function fill3DBox(startX, startY, startZ, endX, endY, endZ) {
-    for (let x = startX; x < endX; x++) {
-        for (let y = startY; y < endY; y++) {
-            for (let z = startZ; z < endZ; z++) {
-                scene3D[x][y][z] = 1;
-            }
-        }
-    }
-}
-console.log("Creating a box...");
-fill3DBox(200, 200, 200, 300, 300, 300);
-
-function fillSphere(x0, y0, z0, r) {
-    for (let x = 0; x < sceneDims[0]; x++) {
-        for (let y = 0; y < sceneDims[1]; y++) {
-            for (let z = 0; z < sceneDims[2]; z++) {
-                if ((x - x0) ** 2 + (y - y0) ** 2 + (z - z0) ** 2 == r ** 2) {
-                    scene3D[x][y][z] = 1;
-                }
-            }
-        }
-    }
-}
-
-// console.log("Creating a sphere...");
-// fillSphere(100, 100, 300, 1j0);
-
 function projectScene() {
-
     console.log("Clearing canvas...");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     console.log("Canvas cleared.");
-
     console.log(`Drawing scene with F=${F}`);
     let dCount = 0;
     for (let x = 0; x < sceneDims[0]; x++) {
@@ -94,7 +63,6 @@ function projectScene() {
                     let y2D = dy * (F / dz) + (canvas.height / 2);
                     let c = [128, 128, 128, 100];
                     definePixel(x2D, y2D, c);
-                    // drawPixel(x2D, y2D, 'blue');
                     dCount++;
                 }
             }
@@ -109,8 +77,14 @@ function projectScene() {
     }
     let newImgData = new ImageData(data.data, canvas.width, canvas.height);
     ctx.putImageData(newImgData, 0, 0);
-    console.log(data.data)
     console.log("Done")
 }
+
+console.log(`Creating a ${sceneDims[0]} x ${sceneDims[1]} x ${sceneDims[2]} scene...`);
+var scene3D = Array(sceneDims[0]).fill().map(() => Array(sceneDims[1]).fill().map(() => Array(sceneDims[2]).fill(0)));
+console.log("Creating a box...");
+fill3DBox(200, 200, 200, 300, 300, 300);
+console.log("Creating a sphere...");
+fillSphere(100, 100, 300, 50);
 
 projectScene();
