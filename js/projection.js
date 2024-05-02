@@ -1,3 +1,4 @@
+var infoText = document.getElementById('info-text');
 var canvas = document.getElementById('myCanvas');
 var ctx = canvas.getContext('2d');
 console.log("Clearing canvas...");
@@ -50,10 +51,7 @@ function drawScene() {
 }
 
 function projectScene() {
-    console.log("Clearing canvas...");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log("Canvas cleared.");
-    console.log(`Drawing scene with F=${F}`);
+    console.log(`Computing scene with F=${F}`);
     let dCount = 0;
     for (let x = 0; x < sceneDims[0]; x++) {
         for (let y = 0; y < sceneDims[1]; y++) {
@@ -84,6 +82,10 @@ function projectScene() {
             definePixel(x, y, [255, 0, 0, 255]);
         }
     }
+    console.log("Clearing canvas...");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    console.log("Canvas cleared.");
+    console.log("Drawing scene...");
     drawScene();
     console.log("Done")
 }
@@ -94,5 +96,9 @@ console.log("Creating a box...");
 fill3DBox(210, 190, 199, 210 + 101, 190 + 101, 199 + 101);
 console.log("Creating a sphere...");
 fillSphere(100, 100, 300, 50);
-
 projectScene();
+infoText.textContent = `
+    Scene: ${sceneDims[0]}x${sceneDims[1]}x${sceneDims[2]}
+    Camera: (${camPos})
+    Focal length: ${F}
+`;
