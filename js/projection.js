@@ -1,8 +1,13 @@
 var canvas = document.getElementById('myCanvas');
 var ctx = canvas.getContext('2d');
+console.log("Clearing canvas...");
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+console.log(data)
 
 const sceneDims = [500, 500, 500];
-const F = 180; // Focal distance
+const F = 200; // Focal length
+const camPos = [200, 150, 0];
 
 function getShadeOfGrey(greyLevel) {
     // Clamp the value between 0 and 255
@@ -18,6 +23,24 @@ function drawPixel(x, y, color) {
     ctx.fillRect(x, y, 1, 1);
 }
 
+function definePixel(x, y, [r, g, b, a]) {
+    let d = Math.round((y * canvas.width + x) * 4);
+    data.data[d + 0] = r;
+    data.data[d + 1] = g;
+    data.data[d + 2] = b;
+    data.data[d + 3] = a;
+}
+
+// for (let i = 0; i < canvas.width * canvas.height * 4; i+=4) {
+//     data.data[i + 0] = 0;
+//     data.data[i + 1] = 0;
+//     data.data[i + 2] = 255;
+//     data.data[i + 3] = 255;
+//
+// }
+// let newImgData = new ImageData(data.data, canvas.width, canvas.height);
+// ctx.putImageData(newImgData, 0, 0);
+
 console.log(`Creating a ${sceneDims[0]} x ${sceneDims[1]} x ${sceneDims[2]} scene...`);
 var scene3D = Array(sceneDims[0]).fill().map(() => Array(sceneDims[1]).fill().map(() => Array(sceneDims[2]).fill(0)));
 
@@ -32,7 +55,7 @@ function fill3DBox(startX, startY, startZ, endX, endY, endZ) {
 }
 
 console.log("Creating a box...");
-fill3DBox(200, 200, 200, 300, 300, 300);
+fill3DBox(200, 200, 200, 300, 300, 201);
 
 function projectScene() {
 
@@ -44,20 +67,37 @@ function projectScene() {
     let dCount = 0;
     for (let x = 0; x < sceneDims[0]; x++) {
         for (let y = 0; y < sceneDims[1]; y++) {
-            for (let z = 0; z < sceneDims[2]; z++) {
+            for (let z = sceneDims[2]; z > 1; z--) {
                 if (scene3D[x][y][z] == 1) {
-                    // let x2D = x * (F / z);
-                    // let y2D = y * (F / z);
-                    // color = getShadeOfGrey(z);
-                    drawPixel(x * (F / z), y * (F / z), getShadeOfGrey(
-                        200 * (z / sceneDims[2]) + 50
-                    ));
+                    // Offset camera position in scene
+                    let dx = x - camPos[0];
+                    let dy = y - camPos[1];
+                    let dz = z - camPos[2];
+                    // Our camera is locked off, so angles become identity transform
+
+                    // 2D projection
+                    let x2D = dx * (F / dz) + (canvas.width / 2);
+                    let y2D = dy * (F / dz) + (canvas.height / 2);
+                    let c = [128, 128, 128, 100];
+                    definePixel(x2D, y2D, c);
+                    // drawPixel(x2D, y2D, 'blue');
                     dCount++;
                 }
             }
         }
     }
-    console.log("Scene drawn in ", dCount);
+    console.log("Scene computed in ", dCount);
+    // Add some rulers for debugging
+    for (let x = 0; x < canvas.width; x += 50) {
+        for (let y = 0; y < canvas.height; y += 50) {
+            definePixel(x, y, [255, 0, 0, 255]);
+        }
+    }
+    let newImgData = new ImageData(data.data, canvas.width, canvas.height);
+    ctx.putImageData(newImgData, 0, 0);
+    console.log(data.data)
+    console.log("Done?")
+
 }
 
 projectScene();
