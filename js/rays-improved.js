@@ -9,7 +9,6 @@ const height = canvas.height;
 
 const newImg = ctx.getImageData(0, 0, width, height);
 
-
 class Vector {
     static UP = { x: 0, y: 1, z: 0 };
     static ZERO = { x: 0, y: 0, z: 0 };
@@ -183,8 +182,19 @@ function surface(ray, scene, object, pointAtTime, normal, depth) {
     if (object.lambert) {
         for (const light of scene.lights) {
             if (!isLightVisible(pointAtTime, scene, light)) continue;
-            const contribution = Vector.dotProduct(Vector.unitVector(Vector.subtract(light, pointAtTime)), normal);
-            if (contribution > 0) lambertAmount += contribution;
+            var contribution = Vector.dotProduct(
+                Vector.unitVector(Vector.subtract(light, pointAtTime)),
+                normal);
+            if (contribution > 0) {
+                lambertAmount += contribution;
+                // console.log({
+                //     'contribution': contribution,
+                //     'lambertAmount': lambertAmount,
+                //     'light': light,
+                //     'pointAtTime': pointAtTime,
+                //     'normal': normal
+                // });
+            }
         }
     }
 
@@ -193,23 +203,30 @@ function surface(ray, scene, object, pointAtTime, normal, depth) {
             point: pointAtTime,
             vector: Vector.reflectThrough(ray.vector, normal),
         };
-        const reflectedColor = trace(reflectedRay, scene, depth + 1);
+        const reflectedColor = trace(reflectedRay, scene, ++depth);
         if (reflectedColor) {
             c = c.add(reflectedColor).scaleBy(object.specular);
         }
     }
 
     lambertAmount = Math.min(1, lambertAmount);
-    return new Color(
+    cFinal = new Color(
         c.r + b.r * lambertAmount * object.lambert + b.r * object.ambient,
         c.g + b.g * lambertAmount * object.lambert + b.g * object.ambient,
         c.b + b.b * lambertAmount * object.lambert + b.b * object.ambient
     );
+    return cFinal;
 }
 
 function isLightVisible(pt, scene, light) {
-    const [dist, _] = intersectScene({ point: pt, vector: Vector.unitVector(Vector.subtract(light, pt)) }, scene);
-    return dist > -0.005;
+    var distObject = intersectScene(
+        {
+            point: pt,
+            vector: Vector.unitVector(Vector.subtract(pt, light)),
+        },
+        scene
+    );
+    return distObject[0] > -0.005;
 }
 
 let mouseX = 0;
