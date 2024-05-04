@@ -1,12 +1,19 @@
-console.log("Rays");
 const body = document.body;
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-const width = canvas.width;
-const height = canvas.height;
+const width = 640;
+const height = 480;
+[canvas.width, canvas.height] = [width, height];
 
 const newImg = ctx.getImageData(0, 0, width, height);
+
+let mouseX = 0;
+let mouseY = 0;
+document.onmousemove = function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+};
 
 class Vector {
     static UP = { x: 0, y: 1, z: 0 };
@@ -103,7 +110,7 @@ const scene = {
 };
 
 function render(scene) {
-    console.log("Rendering...");
+    const tStart = performance.now();
 
     const camera = scene.camera;
     const eyeVector = Vector.unitVector(Vector.subtract(camera.vector, camera.point));
@@ -135,9 +142,11 @@ function render(scene) {
             newImg.data[index + 3] = 255;
         }
     }
-    console.log("Updating canvas...");
     ctx.putImageData(newImg, 0, 0);
-    console.log("Render done.");
+
+    let tDelta = performance.now() - tStart;
+    let fps = 1 / (tDelta / 1000);
+    console.log(`Rendered in ${(tDelta).toFixed(1)}ms (${fps.toFixed(0)}fps)`);
 }
 
 function trace(ray, scene, depth) {
@@ -222,19 +231,12 @@ function isLightVisible(pt, scene, light) {
     return distObject[0] > -0.005;
 }
 
-let mouseX = 0;
-let mouseY = 0;
-document.onmousemove = function(e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-};
-
 function tick() {
-    const xFactor = (window.innerWidth / 2 - mouseX) / window.innerWidth * 2;
-    const yFactor = (window.innerHeight / 2 - mouseY) / window.innerHeight * 2;
+    const xFactor = (window.innerWidth / 2 - mouseX) / window.innerWidth * 0.1;
+    const yFactor = (window.innerHeight / 2 - mouseY) / window.innerHeight * 0.1;
 
-    scene.camera.point.x += xFactor;
-    scene.camera.point.y += yFactor;
+    scene.camera.vector.x += xFactor;
+    scene.camera.vector.y += yFactor;
 
     console.log("Camera Updated:", scene.camera);
     render(scene);
