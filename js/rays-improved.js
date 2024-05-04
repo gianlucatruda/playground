@@ -2,15 +2,15 @@ const MOVE_MULT = 0.2;
 const SHRINK_FACTOR = 4;
 const REFLECTION_DEPTH = 2;
 const MAX_DIST = 30;
-const CWIDTH = 1920 / SHRINK_FACTOR;
-const CHEIGHT = 1080 / SHRINK_FACTOR;
+const WIDTH = 1920 / SHRINK_FACTOR;
+const HEIGHT = 1080 / SHRINK_FACTOR;
 
 const canvas = document.getElementById('canvas');
 const fpsText = document.getElementById('fps-text');
 const ctx = canvas.getContext('2d');
 
-[canvas.width, canvas.height] = [CWIDTH, CHEIGHT];
-const canvasImage = ctx.getImageData(0, 0, CWIDTH, CHEIGHT);
+[canvas.width, canvas.height] = [WIDTH, HEIGHT];
+const canvasImg = ctx.getImageData(0, 0, WIDTH, HEIGHT);
 
 let isRealtime = false;
 let trackingMouse = false;
@@ -20,6 +20,42 @@ let camera = {
     fov: 45,
     vector: { x: 0, y: 3, z: 0 },
 };
+
+// TODO refactor interactivity to its own unit
+document.onmousemove = function(e) {
+    const [mouseX, mouseY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+    if (trackingMouse) {
+        camera.vector.x += (startX - mouseX) * 1.0;
+        camera.vector.y += (startY - mouseY) * 1.0;
+        document.body.style.cursor = "grabbing";
+    }
+};
+document.addEventListener('mousedown', function(e) {
+    if (!isRealtime) redrawFrame();
+    [startX, startY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+    trackingMouse = true;
+
+});
+document.addEventListener('mouseup', function() {
+    trackingMouse = false;
+    document.body.style.cursor = "unset";
+});
+document.addEventListener('keydown', function(e) {
+    switch (e.key) {
+        case 'w':
+            camera.position.z += -1 * MOVE_MULT;
+            break;
+        case 's':
+            camera.position.z += 1 * MOVE_MULT;
+            break;
+        case 'a':
+            camera.position.x += -1 * MOVE_MULT;
+            break;
+        case 'd':
+            camera.position.x += 1 * MOVE_MULT;
+            break;
+    }
+});
 
 class Color {
     constructor(r, g, b) {
@@ -78,11 +114,11 @@ class Vec3D {
     static ZERO = new Vec3D(0, 0, 0);
     static UP = new Vec3D(0, 1, 0);
 
-    static dotProduct(a, b) {
+    static dot(a, b) {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    static crossProduct(a, b) {
+    static cross(a, b) {
         return {
             x: a.y * b.z - a.z * b.y,
             y: a.z * b.x - a.x * b.z,
@@ -94,8 +130,8 @@ class Vec3D {
         return { x: a.x * t, y: a.y * t, z: a.z * t };
     }
 
-    static unitVector(a) {
-        const length = Math.sqrt(this.dotProduct(a, a));
+    static normalise(a) {
+        const length = Math.sqrt(this.dot(a, a));
         return this.scale(a, 1 / length);
     }
 
@@ -106,24 +142,21 @@ class Vec3D {
     static subtract(a, b) {
         return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
     }
-
-    static reflectThrough(a, normal) {
-        const d = this.scale(normal, this.dotProduct(a, normal));
-        return this.subtract(this.scale(d, 2), a);
-    }
 }
 
 
+// TODO this needs a tidy and a rethink
 function traceRay(ray, scene, depth) {
     if (depth > REFLECTION_DEPTH) return;
-    const hit = getFirstReflection(ray, scene);
+    const hit = getFirstCollision(ray, scene);
     if (hit.dist > MAX_DIST) return new Color(255, 255, 255);
     const hitPoint = Vec3D.add(ray.position, Vec3D.scale(ray.vector, hit.dist));
     // TODO generalise to nonspheres, also "sphere of concern" lol
-    return computeReflectedColor(ray, scene, hit.object, hitPoint, calcSphereNorm(hit.object, hitPoint), depth);
+    const reflecNorm = Vec3D.normalise(Vec3D.subtract(hitPoint, hit.object.position));
+    return computeReflectedColor(ray, scene, hit.object, hitPoint, reflecNorm, depth);
 }
 
-function getFirstReflection(ray, scene) {
+function getFirstCollision(ray, scene) {
     let hit = { 'dist': Infinity, 'object': null };
     for (const object of scene.objects) {
         if (object.type != "sphere") console.warn(`Could not render unsuported '${object.type}' object.`);
@@ -138,18 +171,14 @@ function getFirstReflection(ray, scene) {
 }
 
 // TODO refactor 
+// TODO just have a sphere class?
 function getSphereHit(sphere, ray) {
     const eyeToCenter = Vec3D.subtract(sphere.position, ray.position);
-    const v = Vec3D.dotProduct(eyeToCenter, ray.vector);
-    const eoDot = Vec3D.dotProduct(eyeToCenter, eyeToCenter);
+    const v = Vec3D.dot(eyeToCenter, ray.vector);
+    const eoDot = Vec3D.dot(eyeToCenter, eyeToCenter);
     const discriminant = Math.pow(sphere.radius, 2) - eoDot + v * v;
     if (discriminant < 0) return;
     return v - Math.sqrt(discriminant);
-}
-
-// TODO just have a sphere class?
-function calcSphereNorm(sphere, pos) {
-    return Vec3D.unitVector(Vec3D.subtract(pos, sphere.position));
 }
 
 // TODO needs major refactor. a total mess
@@ -160,8 +189,8 @@ function computeReflectedColor(ray, scene, object, hitPoint, normal, depth) {
     if (object.lambert) {
         for (const light of scene.lights) {
             if (!isLightVisible(hitPoint, scene, light)) continue;
-            let contribution = Vec3D.dotProduct(
-                Vec3D.unitVector(Vec3D.subtract(light, hitPoint)),
+            let contribution = Vec3D.dot(
+                Vec3D.normalise(Vec3D.subtract(light, hitPoint)),
                 normal);
             if (contribution > 0) {
                 lambertAmount += contribution;
@@ -170,9 +199,11 @@ function computeReflectedColor(ray, scene, object, hitPoint, normal, depth) {
     }
 
     if (object.specular) {
+        let reflectedVec = Vec3D.scale(normal, Vec3D.dot(ray.vector, normal));
+        reflectedVec = Vec3D.subtract(Vec3D.scale(reflectedVec, 2), ray.vector);
         const reflectedRay = {
             position: hitPoint,
-            vector: Vec3D.reflectThrough(ray.vector, normal),
+            vector: reflectedVec,
         };
         const reflectedColor = traceRay(reflectedRay, scene, ++depth);
         if (reflectedColor) {
@@ -191,14 +222,14 @@ function computeReflectedColor(ray, scene, object, hitPoint, normal, depth) {
 
 // TODO refactor
 function isLightVisible(pt, scene, light) {
-    let distObject = getFirstReflection(
+    let hitFromLight = getFirstCollision(
         {
             position: pt,
-            vector: Vec3D.unitVector(Vec3D.subtract(pt, light)),
+            vector: Vec3D.normalise(Vec3D.subtract(pt, light)),
         },
         scene
     );
-    return distObject.dist > -0.005;
+    return hitFromLight.dist > -0.005;
 }
 
 
@@ -206,36 +237,33 @@ function renderScene(scene) {
     const tStart = performance.now();
 
     // TODO refactor these
-    const eyeVector = Vec3D.unitVector(Vec3D.subtract(camera.vector, camera.position));
-    const vpRight = Vec3D.unitVector(Vec3D.crossProduct(eyeVector, Vec3D.UP));
-    const vpUp = Vec3D.unitVector(Vec3D.crossProduct(vpRight, eyeVector));
-    const fovRadians = Math.PI * (camera.fov / 2) / 180;
-    const heightWidthRatio = CHEIGHT / CWIDTH;
-    const halfWidth = Math.tan(fovRadians);
-    const halfHeight = heightWidthRatio * halfWidth;
-    const camerawidth = halfWidth * 2;
-    const cameraheight = halfHeight * 2;
-    const pixelWidth = camerawidth / (CWIDTH - 1);
-    const pixelHeight = cameraheight / (CHEIGHT - 1);
+    const eyeVector = Vec3D.normalise(Vec3D.subtract(camera.vector, camera.position));
+    const vpRight = Vec3D.normalise(Vec3D.cross(eyeVector, Vec3D.UP));
+    const vpUp = Vec3D.normalise(Vec3D.cross(vpRight, eyeVector));
+    const fovRad = Math.PI * (camera.fov / 2) / 180;
+    const halfWidth = Math.tan(fovRad);
+    const halfHeight = HEIGHT / WIDTH * halfWidth;
+    const pixelWidth = halfWidth * 2 / (WIDTH - 1);
+    const pixelHeight = halfHeight * 2 / (HEIGHT - 1);
 
-    for (let x = 0; x < CWIDTH; x++) {
-        for (let y = 0; y < CHEIGHT; y++) {
+    for (let x = 0; x < WIDTH; x++) {
+        for (let y = 0; y < HEIGHT; y++) {
             const xComp = Vec3D.scale(vpRight, x * pixelWidth - halfWidth);
             const yComp = Vec3D.scale(vpUp, y * pixelHeight - halfHeight);
             const ray = {
                 position: camera.position,
-                vector: Vec3D.unitVector(Vec3D.add(Vec3D.add(eyeVector, xComp), yComp))
+                vector: Vec3D.normalise(Vec3D.add(Vec3D.add(eyeVector, xComp), yComp))
             };
 
-            const colorVector = traceRay(ray, scene, 0);
-            const index = x * 4 + y * CWIDTH * 4;
-            canvasImage.data[index + 0] = colorVector.r;
-            canvasImage.data[index + 1] = colorVector.g;
-            canvasImage.data[index + 2] = colorVector.b;
-            canvasImage.data[index + 3] = 255;
+            const colorVec = traceRay(ray, scene, 0);
+            const index = x * 4 + y * WIDTH * 4;
+            canvasImg.data[index + 0] = colorVec.r;
+            canvasImg.data[index + 1] = colorVec.g;
+            canvasImg.data[index + 2] = colorVec.b;
+            canvasImg.data[index + 3] = 255;
         }
     }
-    ctx.putImageData(canvasImage, 0, 0);
+    ctx.putImageData(canvasImg, 0, 0);
 
     let tDelta = performance.now() - tStart;
     let fps = 1 / (tDelta / 1000);
@@ -249,42 +277,4 @@ function redrawFrame() {
     requestAnimationFrame(redrawFrame);
 }
 
-
 renderScene(SCENE);
-
-
-// TODO refactor interactivity to its own unit
-document.onmousemove = function(e) {
-    const [mouseX, mouseY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
-    if (trackingMouse) {
-        camera.vector.x += (startX - mouseX) * 1.0;
-        camera.vector.y += (startY - mouseY) * 1.0;
-        document.body.style.cursor = "grabbing";
-    }
-};
-document.addEventListener('mousedown', function(e) {
-    if (!isRealtime) redrawFrame();
-    [startX, startY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
-    trackingMouse = true;
-
-});
-document.addEventListener('mouseup', function(e) {
-    trackingMouse = false;
-    document.body.style.cursor = "unset";
-});
-document.addEventListener('keydown', function(e) {
-    switch (e.key) {
-        case 'w':
-            camera.position.z += -1 * MOVE_MULT;
-            break;
-        case 's':
-            camera.position.z += 1 * MOVE_MULT;
-            break;
-        case 'a':
-            camera.position.x += -1 * MOVE_MULT;
-            break;
-        case 'd':
-            camera.position.x += 1 * MOVE_MULT;
-            break;
-    }
-});
