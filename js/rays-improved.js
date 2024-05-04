@@ -1,4 +1,3 @@
-
 console.log("Rays");
 const body = document.body;
 const canvas = document.getElementById('canvas');
@@ -162,6 +161,7 @@ function intersectScene(ray, scene) {
     return closest;
 }
 
+// TODO refactor to general objects (check if sphere to call sphereInter...)
 function sphereIntersection(sphere, ray) {
     const eyeToCenter = Vector.subtract(sphere.point, ray.point);
     const v = Vector.dotProduct(eyeToCenter, ray.vector);
@@ -187,13 +187,6 @@ function surface(ray, scene, object, pointAtTime, normal, depth) {
                 normal);
             if (contribution > 0) {
                 lambertAmount += contribution;
-                // console.log({
-                //     'contribution': contribution,
-                //     'lambertAmount': lambertAmount,
-                //     'light': light,
-                //     'pointAtTime': pointAtTime,
-                //     'normal': normal
-                // });
             }
         }
     }
@@ -205,15 +198,15 @@ function surface(ray, scene, object, pointAtTime, normal, depth) {
         };
         const reflectedColor = trace(reflectedRay, scene, ++depth);
         if (reflectedColor) {
-            c = c.add(reflectedColor).scaleBy(object.specular);
+            c = c.add(reflectedColor.scaleBy(object.specular));
         }
     }
 
     lambertAmount = Math.min(1, lambertAmount);
     cFinal = new Color(
-        c.r + b.r * lambertAmount * object.lambert + b.r * object.ambient,
-        c.g + b.g * lambertAmount * object.lambert + b.g * object.ambient,
-        c.b + b.b * lambertAmount * object.lambert + b.b * object.ambient
+        c.r + (b.r * lambertAmount * object.lambert) + (b.r * object.ambient),
+        c.g + (b.g * lambertAmount * object.lambert) + (b.g * object.ambient),
+        c.b + (b.b * lambertAmount * object.lambert) + (b.b * object.ambient)
     );
     return cFinal;
 }
