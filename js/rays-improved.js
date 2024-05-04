@@ -86,7 +86,7 @@ const scene = {
             type: "sphere",
             point: { x: 1.2, y: 2, z: -1 },
             color: new Color(200, 100, 100),
-            specular: 0.8,
+            specular: 0.9, // high spec object
             lambert: 0.3,
             ambient: 0.3,
             radius: 1.0,
@@ -142,7 +142,7 @@ function render(scene) {
 }
 
 function trace(ray, scene, depth) {
-    if (depth > 3) return new Color(255, 255, 255);
+    if (depth > 3) return;
     const [dist, object] = intersectScene(ray, scene);
     if (dist === Infinity) return new Color(255, 255, 255);
 
