@@ -1,19 +1,21 @@
 const body = document.body;
 const canvas = document.getElementById('canvas');
+const fpsText = document.getElementById('fps-text');
 const ctx = canvas.getContext('2d');
 
-const width = 640;
-const height = 480;
+const width = 1920 / 4;
+const height = 1080 / 4;
 [canvas.width, canvas.height] = [width, height];
 
 const newImg = ctx.getImageData(0, 0, width, height);
 
 let mouseX = 0;
 let mouseY = 0;
-document.onmousemove = function(e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-};
+const moveMult = 0.2;
+var isRealtime = false;
+var trackingMouse = false;
+var [startX, startY] = [0.0, 0.0];
+
 
 class Vector {
     static UP = { x: 0, y: 1, z: 0 };
@@ -146,6 +148,7 @@ function render(scene) {
 
     let tDelta = performance.now() - tStart;
     let fps = 1 / (tDelta / 1000);
+    if (isRealtime) fpsText.innerText = fps.toFixed(0) + "fps";
     console.log(`Rendered in ${(tDelta).toFixed(1)}ms (${fps.toFixed(0)}fps)`);
 }
 
@@ -232,16 +235,44 @@ function isLightVisible(pt, scene, light) {
 }
 
 function tick() {
-    const xFactor = (window.innerWidth / 2 - mouseX) / window.innerWidth * 0.1;
-    const yFactor = (window.innerHeight / 2 - mouseY) / window.innerHeight * 0.1;
-
-    scene.camera.vector.x += xFactor;
-    scene.camera.vector.y += yFactor;
-
-    console.log("Camera Updated:", scene.camera);
+    isRealtime = true;
     render(scene);
     requestAnimationFrame(tick);
 }
 
 render(scene);
-//requestAnimationFrame(tick);
+
+document.onmousemove = function(e) {
+    [mouseX, mouseY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+    if (trackingMouse) {
+        scene.camera.vector.x += (startX - mouseX) * 1.0;
+        scene.camera.vector.y += (startY - mouseY) * 1.0;
+        document.body.style.cursor = "grabbing";
+    }
+};
+document.addEventListener('mousedown', function(e) {
+    if (!isRealtime) tick();
+    [startX, startY] = [e.clientX / window.innerWidth, e.clientY / window.innerHeight];
+    trackingMouse = true;
+
+});
+document.addEventListener('mouseup', function(e) {
+    trackingMouse = false;
+    document.body.style.cursor = "unset";
+});
+document.addEventListener('keydown', function(e) {
+    switch (e.key) {
+        case 'w':
+            scene.camera.point.z += -1 * moveMult;
+            break;
+        case 's':
+            scene.camera.point.z += 1 * moveMult;
+            break;
+        case 'a':
+            scene.camera.point.x += -1 * moveMult;
+            break;
+        case 'd':
+            scene.camera.point.x += 1 * moveMult;
+            break;
+    }
+});
