@@ -18,15 +18,12 @@ for attachment in "$attachments_directory"/*; do
   found=false
 
   # Search for attachment references in markdown files
-  while IFS= read -r -d $'\n' mdfile; do
-    # echo "  grep -Fq -e \"$attachment_basename\" \"$mdfile\""
-    if grep -Fq -e "$attachment_basename" "$mdfile"; then
-      # If found, write to matches file and mark as found
-      echo "$mdfile $attachment_basename" >> "$output_matches"
-      found=true
-      # echo "$mdfile"
-    fi
-  done < <(find "$base_directory/" -name '*.md')
+  matches=`rg --files-with-matches -e "$attachment_basename" "$base_directory"`
+  # echo "matches: $matches"
+  if ! [ "$matches" = "" ]; then
+    found=true
+    echo "$attachment_basename : $matches" >> "$output_matches"
+  fi
 
   # If attachment is not referenced in any markdown, log to orphans
   if [ "$found" = false ]; then
@@ -35,3 +32,4 @@ for attachment in "$attachments_directory"/*; do
 done
 
 echo "Process complete. Matches written to $output_matches and orphans written to $output_orphans."
+#
