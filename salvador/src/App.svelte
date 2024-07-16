@@ -9,56 +9,57 @@
 		btnDisabled = true;
 		btnText = "Painting...";
 		makeRequest(promptText);
-
 	};
 
-	async function makeRequest(p){
+	async function makeRequest(p) {
+		const url = "https://api.openai.com/v1/images/generations";
+		const bodyData = {
+			model: "dall-e-2",
+			// model: "dall-e-3",
+			prompt: p,
+			n: 1,
+			size: "256x256",
+			// size: "1024x1024"
+		};
+		try {
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${OPENAI_API_KEY}`,
+				},
+				body: JSON.stringify(bodyData),
+			});
 
-        const url = "https://api.openai.com/v1/images/generations";
-        const bodyData = {
-            model: "dall-e-2",
-            // model: "dall-e-3",
-            prompt: p,
-            n: 1,
-            size: "256x256",
-            // size: "1024x1024"
-        };
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
-                },
-                body: JSON.stringify(bodyData)
-            });
+			if (!response.ok) {
+				throw new Error("Network response was not ok");
+			}
 
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-            const result = await response.json();
-            console.log(result.data[0]);
+			const result = await response.json();
+			console.log(result.data[0]);
 			imgURL = result.data[0].url;
-
-        } catch (error) {
-            console.error('Failed to fetch image:', error);
-        }
+		} catch (error) {
+			console.error("Failed to fetch image:", error);
+		}
 	}
-
 </script>
 
 <main>
 	<h1>Salvador</h1>
-	<p>A custom frontend for <a href="https://openai.com/index/dall-e-3/">OpenAI's DALLE 3</a></p>
+	<p>
+		A custom frontend for <a href="https://openai.com/index/dall-e-3/"
+			>OpenAI's DALLE 3</a
+		>
+	</p>
 	<div class="modelParams">
 		<label for="prompt">Prompt</label>
-		<textarea id="prompt" rows="3" cols="40" wrap="soft" bind:value={promptText}></textarea>
+		<textarea id="prompt" rows="3" cols="40" wrap="soft" bind:value={promptText}
+		></textarea>
 		<button on:click={makeImage} disabled={btnDisabled}>{btnText}</button>
 	</div>
 	<div class="results">
 		{#if imgURL !== ""}
-			<img src={imgURL} alt="result">
+			<img src={imgURL} alt="result" />
 		{/if}
 	</div>
 </main>
