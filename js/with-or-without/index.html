@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>I can't live with or without you</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+
+<body>
+    <script>
+        let hedgehog, balloon;
+        let score = 0;
+        let NEWROUND = false;
+
+        function preload() {
+            hedgehogImg = loadImage('hedgehog.png');  // Load the image
+        }
+
+
+        function setup() {
+            createCanvas(500, 500);
+            hedgehog = new Hedgehog();
+            balloon = new Balloon();
+        }
+
+        function draw() {
+            background(220);
+            hedgehog.update();
+            hedgehog.show();
+
+            balloon.update();
+            balloon.show();
+
+            showScore();
+
+            checkCollision();
+        }
+
+        function showScore() {
+            fill(50, 0, 0);
+            textSize(24);  // Size of the text
+            text(`Score: ${score}`, 20, 30);  // Displaying the score at the top-left corner
+        }
+
+        function checkCollision() {
+            // Simple distance check for collision
+            if (dist(hedgehog.x, hedgehog.y, balloon.x, balloon.y) < (balloon.width + hedgehog.width) / 2) {
+                noLoop(); // Stop the drawing loop
+                alert('Game Over: Balloon Burst!');
+                location.reload();
+            }
+
+            // Check if inside the hoop
+            if (dist(hedgehog.x, hedgehog.y, balloon.hoopX, balloon.hoopY) < balloon.hoopSize / 2.5) {
+                if (NEWROUND) {
+                    score++;
+                    NEWROUND = false;
+                }
+            }
+        }
+
+        function keyPressed() {
+            if (key === ' ') {
+                hedgehog.jump();
+            }
+        }
+
+        class Hedgehog {
+            constructor() {
+                this.x = 100;
+                this.y = height - 30;
+                this.vy = -10;
+                this.gravity = 1;
+                this.width = 50;
+            }
+
+            jump() {
+                this.vy = -15;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.y = constrain(this.y, 0, height - 30);
+            }
+
+            show() {
+                // fill(200, 100, 110);
+                // ellipse(this.x, this.y, this.width, this.width);
+                image(hedgehogImg, this.x - this.width / 2, this.y - this.width / 2, this.width, this.width);
+            }
+        }
+
+        class Balloon {
+            constructor() {
+                this.x = width;
+                this.y = random(250, height - 100);
+                this.hoopSize = random(40, 100);
+                this.stringLen = random(10, 40);
+                this.width = 50;
+                this.height = 55;
+                this.speed = 2;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x < 0) {
+                    this.x = width;
+                    this.y = random(250, height - 100);
+                    this.hoopSize = random(40, 100);
+                    this.stringLen = random(20, 50);
+                    this.speed = random(1, 5);
+                    NEWROUND = true;
+                }
+                this.hoopY = this.y + this.height / 2 + this.stringLen + this.hoopSize / 2;
+                this.hoopX = this.x;
+            }
+
+            show() {
+                // balloon
+                fill(0, 0, 200);
+                ellipse(this.x, this.y, this.width, this.height);
+
+                // string
+                // stroke(0);
+                strokeWeight(2);
+                line(this.x, this.y + this.height / 2, this.x+10, this.y + this.height / 2 + this.stringLen); // Adjust these values to position the string correctly
+
+                // hoop
+                noFill();
+                ellipse(this.x+15, this.hoopY, this.hoopSize, this.hoopSize); // Adjust vertical position to connect with string
+
+                // hitbox
+                // fill(50, 0, 0);
+                // ellipse(this.hoopX, this.hoopY, this.hoopSize / 1.75, this.hoopSize / 1.75);
+
+            }
+        }
+    </script>
+</body>
+
+</html>
