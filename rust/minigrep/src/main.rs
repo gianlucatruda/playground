@@ -5,17 +5,18 @@
 
 use std::env; // To refer to std::env::args unambiguously
 use std::fs; // To use std::fs::read_to_string unambiguously
+use std::process;
 
 fn main() {
     // Get the args (an iterator) and collect as a collection
     let args: Vec<String> = env::args().collect();
-    dbg!(&args);
 
-    let config = Config::build(&args).expect("The fuck?");
-    dbg!(&config);
+    let config = Config::build(&args).unwrap_or_else(|err| {
+        println!("Problem parsing arguments: {err}");
+        process::exit(1);
+    });
 
     let contents = fs::read_to_string(config.file_path).expect("Unable to read file");
-    dbg!(&contents);
 }
 
 #[derive(Debug)]
