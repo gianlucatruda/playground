@@ -29,14 +29,13 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     // Box<dyn Error> means the function will return a type that implements the Error trait
     // This gives us flexibility to return error values that may be of different types in different error cases.
     let contents = fs::read_to_string(config.file_path)?;
-    if config.ignore_case {
-        for line in search_case_insensitive(&config.query, &contents) {
-            println!("{line}");
-        }
+    let results = if config.ignore_case {
+        search_case_insensitive(&config.query, &contents)
     } else {
-        for line in search(&config.query, &contents) {
-            println!("{line}");
-        }
+        search(&config.query, &contents)
+    };
+    for line in results {
+        println!("{line}");
     }
     Ok(()) // idiomatic way to indicate that we’re calling run for its side effects only
 }
