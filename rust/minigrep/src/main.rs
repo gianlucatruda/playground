@@ -11,7 +11,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(&args);
 
-    let config = Config::build(&args);
+    let config = Config::build(&args).expect("The fuck?");
     dbg!(&config);
 
     let contents = fs::read_to_string(config.file_path).expect("Unable to read file");
@@ -25,15 +25,12 @@ struct Config {
 }
 
 impl Config {
-    fn build(args: &[String]) -> Config {
+    fn build(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
-            panic!("Insufficient args: minigrep <needle> <file_path>");
+            return Err("Insufficient args: minigrep <needle> <file_path>");
         }
         let query = args[1].clone();
         let file_path = args[2].clone();
-        Config {
-            query: query.to_string(),
-            file_path: file_path.to_string(),
-        }
+        Ok(Config { query, file_path })
     }
 }
