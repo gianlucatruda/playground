@@ -10,13 +10,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Insufficient args: minigrep <needle> <file_path>");
-        }
-        let query = args[1].clone();
-        let file_path = args[2].clone();
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("No query string provided"),
+        };
+        let file_path = match args.next() {
+            Some(arg) => arg,
+            None => return Err("No file path provided"),
+        };
+
         let ignore_case = env::var("IGNORE_CASE").is_ok();
+
         Ok(Config {
             query,
             file_path,
@@ -46,23 +51,30 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     // we know contents is the argument that should be connected to the
     // return value using the lifetime syntax.
 
-    let mut matches: Vec<&str> = Vec::new();
-    for line in contents.lines() {
-        if line.contains(query) {
-            matches.push(line);
-        }
-    }
-    matches
+    // let mut matches: Vec<&str> = Vec::new();
+    // for line in contents.lines() {
+    //     if line.contains(query) {
+    //         matches.push(line);
+    //     }
+    // }
+    //
+    // matches
+
+    contents.lines().filter(|l| l.contains(query)).collect()
 }
 
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut matches: Vec<&str> = Vec::new();
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query.to_lowercase()) {
-            matches.push(line);
-        }
-    }
-    matches
+    // let mut matches: Vec<&str> = Vec::new();
+    // for line in contents.lines() {
+    //     if line.to_lowercase().contains(&query.to_lowercase()) {
+    //         matches.push(line);
+    //     }
+    // }
+    // matches
+    contents
+        .lines()
+        .filter(|l| l.to_lowercase().contains(&query.to_lowercase()))
+        .collect()
 }
 
 #[cfg(test)]
